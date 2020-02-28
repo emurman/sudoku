@@ -1,3 +1,5 @@
+import java.util.Random;
+
 
 public class Sudoku {
     private static final int DEFAULT_SIZE = 9;
@@ -10,6 +12,7 @@ public class Sudoku {
     private final int localGridSize;
     private final int[][] grid;
     private final boolean[][] knownCells;
+    private final Random rng;
 
     private int currentCost;
 
@@ -18,9 +21,12 @@ public class Sudoku {
         this.localGridSize = DEFAULT_LOCAL_GRID_SIZE;
         this.grid = new int[this.n][this.n];
         this.knownCells = new boolean[this.n][this.n];
+        this.rng = new Random();
     }
 
     public Sudoku(String s) {
+        this.rng = new Random();
+
         String size = s.split(" ")[0];
         String repr = s.split(" ")[1];
 
@@ -43,9 +49,14 @@ public class Sudoku {
 
         this.initCost();
         if (this.currentCost != 0) throw new InvalidSudokuException();
+
     }
 
-    public void initCost() {
+    public void setSeed(long seed) {
+        this.rng.setSeed(seed);
+    }
+
+    private void initCost() {
         boolean[] mask = new boolean[this.n + 1];
         int conflicts = 0;
 
@@ -98,9 +109,58 @@ public class Sudoku {
         this.currentCost = conflicts;
     }
 
-    public int probeMove(Move m) {
-        int cost = 0;
+    public void randomAssignment() {
+        for (int i = 0; i < this.grid.length; i++) {
+            for (int j = 0; j < this.grid[i].length; j++) {
+                if (!this.knownCells[i][j]) {
+                    this.grid[i][j] = this.rng.nextInt(this.n - 1) + 1;
+                }
+            }
+        }
 
+        this.initCost();
+    }
+
+    public int probeMove(Move m) {
+        boolean[] violations = new boolean[3];
+        boolean[] alleviations = new boolean[3];
+
+        int localGridX = m.x - (m.x % this.localGridSize);
+        int localGridY = m.y - (m.y % this.localGridSize);
+        
+        for (int i = 0; i < this.grid.length; i++) {
+            int cell = i == m.x ? 0 : this.grid[m.y][i];
+            if (cell == m.new_) violations[0]   = true;
+            if (cell == m.old)  alleviations[0] = true;
+
+            cell = i == m.y ? 0 : this.grid[i][m.x];
+            if (cell == m.new_) violations[1]   = true;   
+            if (cell == m.old)  alleviations[1] = true;
+
+            int x = localGridX + i / localGridSize;
+            int y = localGridY + i % localGridSize;
+            cell = x == m.x && y == m.y ? 0: this.grid[y][x];
+            if (cell == m.new_) violations[2]   = true;
+            if (cell == m.old)  alleviations[2] = true;
+        }
+
+        int cost = 0;
+        
+        for (boolean constraintViolation : violations) {
+            if (constraintViolation) cost++;
+            System.out.println(constraintViolation);
+        }
+        
+        for (boolean constraintAlleviation : alleviations) {
+            if (constraintAlleviation) cost--;
+            System.out.println(constraintAlleviation);
+        }
+
+        return cost;
+    }
+
+    public int cmp(int c, int new_, int old, int cost) {
+        
         return cost;
     }
 
